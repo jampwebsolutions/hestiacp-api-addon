@@ -21,7 +21,8 @@ if (!$data) {
 // 3. Ρύθμιση Κλειδιού (Θα αντικατασταθεί από το install.sh)
 $SECRET_KEY = 'JAMP_KEY_PLACEHOLDER'; 
 
-if ($SECRET_KEY === 'JAMP_KEY_PLACEHOLDER') {
+// Εδώ αλλάζουμε το όνομα του ελέγχου για να μην το πειράξει το sed
+if ($SECRET_KEY === 'NOT_CONFIGURED_YET') {
     http_response_code(500);
     die(json_encode(["error" => "API Bridge not configured."]));
 }
