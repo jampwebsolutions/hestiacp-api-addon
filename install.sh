@@ -58,7 +58,7 @@ echo "$JUST_USER ALL=(ALL) NOPASSWD: /usr/local/hestia/bin/*" > "$SUDO_FILE"
 chmod 440 "$SUDO_FILE"
 
 # 7. Output connection details
-HOSTNAME=$(hostname)
+HOSTNAME=$(curl -s https://ifconfig.me || hostname -f)
 echo -e ""
 echo -e "${GREEN}=========================================${NC}"
 echo -e "${GREEN}   INSTALLATION COMPLETED SUCCESSFULLY   ${NC}"

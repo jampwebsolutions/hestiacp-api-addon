@@ -5,35 +5,38 @@
  * License: GPLv3
  */
 
-// Διαβάζει το input από το Flutter αν στάλθηκε ως JSON ή Stream
+// 1. Ρυθμίσεις Περιβάλλοντος
+date_default_timezone_set('UTC');
+header('Content-Type: application/json');
+
+// 2. Διαχείριση Εισερχόμενων Δεδομένων (JSON από Flutter)
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);
-if ($data) {
-    foreach ($data as $key => $value) {
-        $_POST[$key] = $value;
-    }
+
+// Αν τα δεδομένα δεν είναι JSON, δοκίμασε το κλασικό $_POST
+if (!$data) {
+    $data = $_POST;
 }
 
-// The installer script will replace this placeholder with a unique 24-character key
+// 3. Ρύθμιση Κλειδιού (Θα αντικατασταθεί από το install.sh)
 $SECRET_KEY = 'JAMP_KEY_PLACEHOLDER'; 
 
-// Basic security check to ensure the installer has run
 if ($SECRET_KEY === 'JAMP_KEY_PLACEHOLDER') {
-    header('HTTP/1.1 500 Internal Server Error');
-    die(json_encode(["error" => "API Bridge not configured. Please run the installer script."]));
+    http_response_code(500);
+    die(json_encode(["error" => "API Bridge not configured."]));
 }
 
-// 1. Authenticate the request using a time-based token (TOTP)
-if (!isset($_POST['app_token']) || empty($_POST['app_token'])) {
-    header('HTTP/1.1 403 Forbidden');
+// 4. Αυθεντικοποίηση (TOTP Token)
+$clientToken = $data['app_token'] ?? '';
+if (empty($clientToken)) {
+    http_response_code(403);
     die(json_encode(["error" => "No token provided"]));
 }
 
-$clientToken = $_POST['app_token'];
 $currentTimeWindow = floor(time() / 30);
 $isAuthorized = false;
 
-// Validate token within a 5-minute window to account for server/mobile time drift
+// Έλεγχος σε παράθυρο 5 λεπτών για αποφυγή αποκλίσεων ώρας
 for ($i = -5; $i <= 5; $i++) {
     $expectedHash = hash('sha256', $SECRET_KEY . ($currentTimeWindow + $i));
     if (hash_equals($expectedHash, $clientToken)) {
@@ -43,11 +46,11 @@ for ($i = -5; $i <= 5; $i++) {
 }
 
 if (!$isAuthorized) {
-    header('HTTP/1.1 401 Unauthorized');
+    http_response_code(401);
     die(json_encode(["error" => "Invalid security token"]));
 }
 
-// 2. Define safe HestiaCP commands (Read-only + Restart)
+// 5. Λίστα Επιτρεπόμενων Εντολών
 $allowedCommands = [
     'v-list-sys-info',
     'v-list-sys-services',
@@ -56,40 +59,39 @@ $allowedCommands = [
     'v-restart-service'
 ];
 
-$cmd = $_POST['cmd'] ?? '';
+$cmd = $data['cmd'] ?? '';
 if (!in_array($cmd, $allowedCommands)) {
-    header('HTTP/1.1 403 Forbidden');
-    die(json_encode(["error" => "Command not allowed for security reasons"]));
+    http_response_code(403);
+    die(json_encode(["error" => "Command not allowed"]));
 }
 
-// 3. Sanitize arguments and build the CLI command
-$arg1 = (isset($_POST['arg1']) && $_POST['arg1'] !== '') ? escapeshellarg($_POST['arg1']) : '';
-$arg2 = (isset($_POST['arg2']) && $_POST['arg2'] !== '') ? escapeshellarg($_POST['arg2']) : '';
+// 6. Καθαρισμός Ορισμάτων & Χτίσιμο Εντολής
+$arg1 = (isset($data['arg1']) && $data['arg1'] !== '') ? escapeshellarg($data['arg1']) : '';
+$arg2 = (isset($data['arg2']) && $data['arg2'] !== '') ? escapeshellarg($data['arg2']) : '';
 
+// Χρησιμοποιούμε απόλυτα paths για μέγιστη ασφάλεια
 $fullCommand = "/usr/bin/sudo /usr/local/hestia/bin/" . escapeshellcmd($cmd);
 if ($arg1 !== '') { $fullCommand .= " $arg1"; }
 if ($arg2 !== '') { $fullCommand .= " $arg2"; }
 
-// 4. Execute and return JSON output
+// 7. Εκτέλεση
 $output = shell_exec($fullCommand . " 2>&1");
 
-// Αν το output είναι κενό, σημαίνει ότι η shell_exec είναι απενεργοποιημένη στην PHP
 if ($output === null) {
-    echo json_encode(["error" => "shell_exec is disabled in php.ini"]);
+    http_response_code(500);
+    echo json_encode(["error" => "Execution failed (shell_exec)"]);
     exit;
 }
 
-// Αν το output δεν είναι έγκυρο JSON, σημαίνει ότι το sudo έβγαλε σφάλμα κειμένου
+// 8. Επιστροφή Αποτελέσματος
+// Αν δεν είναι έγκυρο JSON (και δεν είναι restart), επιστρέφουμε σφάλμα συστήματος
 if (!json_decode($output) && $cmd !== 'v-restart-service') {
-    header('Content-Type: application/json');
+    http_response_code(500);
     echo json_encode([
-        "error" => "System Error",
-        "raw_output" => $output,
-        "executed_command" => $fullCommand,
-        "current_user" => posix_getpwuid(posix_geteuid())['name']
+        "error" => "System execution error",
+        "details" => trim($output)
     ]);
     exit;
 }
 
-header('Content-Type: application/json');
 echo $output;
