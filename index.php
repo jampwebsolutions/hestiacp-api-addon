@@ -86,7 +86,7 @@ if (!json_decode($output) && $cmd !== 'v-restart-service') {
         "error" => "System Error",
         "raw_output" => $output,
         "executed_command" => $fullCommand,
-        "current_user" => getcurrentuser()
+        "current_user" => posix_getpwuid(posix_geteuid())['name']
     ]);
     exit;
 }

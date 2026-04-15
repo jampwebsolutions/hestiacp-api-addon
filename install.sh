@@ -48,6 +48,15 @@ chown -R $HESTIA_OWNER "$INSTALL_DIR"
 chmod 755 "$INSTALL_DIR"
 chmod 644 "$INSTALL_DIR/index.php"
 
+# 6b. Configure Sudoers for the specific user
+# Detect only the username from HESTIA_OWNER (before the colon)
+JUST_USER=$(echo $HESTIA_OWNER | cut -d: -f1)
+
+echo "[*] Configuring sudoers for user: $JUST_USER"
+SUDO_FILE="/etc/sudoers.d/hestia-monitor-$JUST_USER"
+echo "$JUST_USER ALL=(ALL) NOPASSWD: /usr/local/hestia/bin/*" > "$SUDO_FILE"
+chmod 440 "$SUDO_FILE"
+
 # 7. Output connection details
 HOSTNAME=$(hostname)
 echo -e ""
