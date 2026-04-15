@@ -1,22 +1,20 @@
 <?php
 /**
  * HestiaCP Monitor Bridge
- * Author: JAMP Web Solutions
+ * Developed by JAMP Web Solutions
  * License: GPLv3
- * * This script acts as a secure bridge between the mobile app and HestiaCP CLI.
  */
 
-$configFile = __DIR__ . '/secret.key';
+// The installer script will replace this placeholder with a unique 24-character key
+$SECRET_KEY = 'JAMP_KEY_PLACEHOLDER'; 
 
-// Check if the secret key exists
-if (!file_exists($configFile)) {
+// Basic security check to ensure the installer has run
+if ($SECRET_KEY === 'JAMP_KEY_PLACEHOLDER') {
     header('HTTP/1.1 500 Internal Server Error');
-    die(json_encode(["error" => "Security key missing. Please run the installer script."]));
+    die(json_encode(["error" => "API Bridge not configured. Please run the installer script."]));
 }
 
-$SECRET_KEY = trim(file_get_contents($configFile));
-
-// Verify that the app sent a token
+// 1. Authenticate the request using a time-based token (TOTP)
 if (!isset($_POST['app_token']) || empty($_POST['app_token'])) {
     header('HTTP/1.1 403 Forbidden');
     die(json_encode(["error" => "No token provided"]));
@@ -26,7 +24,7 @@ $clientToken = $_POST['app_token'];
 $currentTimeWindow = floor(time() / 30);
 $isAuthorized = false;
 
-// Time-based security: Check token against a 5-minute window (compensates for clock drift)
+// Validate token within a 5-minute window to account for server/mobile time drift
 for ($i = -5; $i <= 5; $i++) {
     $expectedHash = hash('sha256', $SECRET_KEY . ($currentTimeWindow + $i));
     if (hash_equals($expectedHash, $clientToken)) {
@@ -40,7 +38,7 @@ if (!$isAuthorized) {
     die(json_encode(["error" => "Invalid security token"]));
 }
 
-// Only allow specific safe commands to be executed
+// 2. Define safe HestiaCP commands (Read-only + Restart)
 $allowedCommands = [
     'v-list-sys-info',
     'v-list-sys-services',
@@ -50,17 +48,20 @@ $allowedCommands = [
 ];
 
 $cmd = $_POST['cmd'] ?? '';
-$arg1 = escapeshellarg($_POST['arg1'] ?? '');
-$arg2 = escapeshellarg($_POST['arg2'] ?? '');
-
 if (!in_array($cmd, $allowedCommands)) {
     header('HTTP/1.1 403 Forbidden');
     die(json_encode(["error" => "Command not allowed for security reasons"]));
 }
 
-// Execute the command using Hestia's CLI
-$fullCommand = "sudo /usr/local/hestia/bin/" . escapeshellcmd($cmd) . " $arg1 $arg2 json";
-$output = shell_exec($fullCommand);
+// 3. Sanitize arguments and build the CLI command
+$arg1 = (isset($_POST['arg1']) && $_POST['arg1'] !== '') ? escapeshellarg($_POST['arg1']) : '';
+$arg2 = (isset($_POST['arg2']) && $_POST['arg2'] !== '') ? escapeshellarg($_POST['arg2']) : '';
 
+$fullCommand = "sudo /usr/local/hestia/bin/" . escapeshellcmd($cmd);
+if ($arg1 !== '') { $fullCommand .= " $arg1"; }
+if ($arg2 !== '') { $fullCommand .= " $arg2"; }
+
+// 4. Execute and return JSON output
+$output = shell_exec($fullCommand);
 header('Content-Type: application/json');
 echo $output;

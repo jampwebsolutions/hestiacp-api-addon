@@ -27,27 +27,28 @@ fi
 
 # 2. Setup directory
 INSTALL_DIR="/usr/local/hestia/web/api/monitor"
-echo -e "[*] Creating secure API directory..."
+echo -e "[*] Preparing secure API directory..."
 mkdir -p "$INSTALL_DIR"
-
-# -- ΝΕΟ: Δυναμική εύρεση του ιδιοκτήτη του HestiaCP --
-HESTIA_OWNER=$(stat -c '%U:%G' /usr/local/hestia/web/api)
 
 # 3. Generate a random 24-character Secret Key
 SECRET_KEY=$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)
-echo "$SECRET_KEY" > "$INSTALL_DIR/secret.key"
-chmod 600 "$INSTALL_DIR/secret.key"
-chown $HESTIA_OWNER "$INSTALL_DIR/secret.key"
 
 # 4. Download index.php from GitHub
-echo -e "[*] Downloading bridge files..."
+echo -e "[*] Downloading bridge files from GitHub..."
 curl -s -o "$INSTALL_DIR/index.php" "https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/index.php"
 
-# Ensure correct ownership for Hestia's web server
+# 5. INJECT THE KEY INTO THE PHP FILE (The Fix)
+# We use 'sed' to replace the placeholder with the actual unique key
+sed -i "s/JAMP_KEY_PLACEHOLDER/$SECRET_KEY/g" "$INSTALL_DIR/index.php"
+
+# 6. Set correct ownership and permissions
+# We detect the owner of the Hestia API folder to ensure compatibility
+HESTIA_OWNER=$(stat -c '%U:%G' /usr/local/hestia/web/api)
 chown -R $HESTIA_OWNER "$INSTALL_DIR"
 chmod 755 "$INSTALL_DIR"
+chmod 644 "$INSTALL_DIR/index.php"
 
-# 5. Output connection details
+# 7. Output connection details
 HOSTNAME=$(hostname)
 echo -e ""
 echo -e "${GREEN}=========================================${NC}"
