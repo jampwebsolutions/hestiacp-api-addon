@@ -22,24 +22,21 @@ wget -qO- [https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon
 ```
 
 **📱 Connecting the App**
+
 Once the installation finishes successfully, the script will output two important pieces of information in your terminal:
-
 Server URL (e.g., https://your-server.com:8083/api/monitor/index.php)
-
 Secret Key (e.g., a1B2c3D4e5F6g7H8i9J0...)
-
 Open your HestiaCP Monitor mobile app, add a new server, and paste these exact details.
 
 **🔒 Security Architecture**
+
 This addon places the index.php bridge script inside the secure /usr/local/hestia/web/api/monitor/ directory. By doing this:
-
 It inherits HestiaCP's built-in Nginx security and SSL certificate.
-
 It operates strictly on the HestiaCP administration port (8083).
-
 It remains entirely completely independent of your public websites and user domains (it will continue to work even if your main website goes down).
 
 **📝 License**
+
 This project is licensed under the GNU GPLv3 License.
 
 Developed with ❤️ by JAMP Web Solutions
