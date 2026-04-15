@@ -39,7 +39,8 @@ curl -s -o "$INSTALL_DIR/index.php" "https://raw.githubusercontent.com/jampwebso
 
 # 5. INJECT THE KEY INTO THE PHP FILE (The Fix)
 # We use 'sed' to replace the placeholder with the actual unique key
-sed -i "s/JAMP_KEY_PLACEHOLDER/$SECRET_KEY/g" "$INSTALL_DIR/index.php"
+# Αντικαθιστά μόνο την ανάθεση της μεταβλητής (πιο ασφαλές)
+sed -i "s/\$SECRET_KEY = 'JAMP_KEY_PLACEHOLDER';/\$SECRET_KEY = '$SECRET_KEY';/g" "$INSTALL_DIR/index.php"
 
 # 6. Set correct ownership and permissions
 # We detect the owner of the Hestia API folder to ensure compatibility
