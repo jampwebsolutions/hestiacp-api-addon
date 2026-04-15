@@ -5,6 +5,15 @@
  * License: GPLv3
  */
 
+// Διαβάζει το input από το Flutter αν στάλθηκε ως JSON ή Stream
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+if ($data) {
+    foreach ($data as $key => $value) {
+        $_POST[$key] = $value;
+    }
+}
+
 // The installer script will replace this placeholder with a unique 24-character key
 $SECRET_KEY = 'JAMP_KEY_PLACEHOLDER'; 
 
@@ -57,11 +66,30 @@ if (!in_array($cmd, $allowedCommands)) {
 $arg1 = (isset($_POST['arg1']) && $_POST['arg1'] !== '') ? escapeshellarg($_POST['arg1']) : '';
 $arg2 = (isset($_POST['arg2']) && $_POST['arg2'] !== '') ? escapeshellarg($_POST['arg2']) : '';
 
-$fullCommand = "sudo /usr/local/hestia/bin/" . escapeshellcmd($cmd);
+$fullCommand = "/usr/bin/sudo /usr/local/hestia/bin/" . escapeshellcmd($cmd);
 if ($arg1 !== '') { $fullCommand .= " $arg1"; }
 if ($arg2 !== '') { $fullCommand .= " $arg2"; }
 
 // 4. Execute and return JSON output
-$output = shell_exec($fullCommand);
+$output = shell_exec($fullCommand . " 2>&1");
+
+// Αν το output είναι κενό, σημαίνει ότι η shell_exec είναι απενεργοποιημένη στην PHP
+if ($output === null) {
+    echo json_encode(["error" => "shell_exec is disabled in php.ini"]);
+    exit;
+}
+
+// Αν το output δεν είναι έγκυρο JSON, σημαίνει ότι το sudo έβγαλε σφάλμα κειμένου
+if (!json_decode($output) && $cmd !== 'v-restart-service') {
+    header('Content-Type: application/json');
+    echo json_encode([
+        "error" => "System Error",
+        "raw_output" => $output,
+        "executed_command" => $fullCommand,
+        "current_user" => getcurrentuser()
+    ]);
+    exit;
+}
+
 header('Content-Type: application/json');
 echo $output;
