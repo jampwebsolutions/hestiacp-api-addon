@@ -18,7 +18,7 @@ It provides a secure, lightweight, and automated way to connect your mobile app 
 Log in to your HestiaCP server via SSH as `root` (or a user with `sudo` privileges) and run the following command:
 
 ```bash
-wget -qO- [https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/install.sh](https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/install.sh) | sudo bash
+wget -qO- https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/install.sh | sudo bash
 ```
 
 **📱 Connecting the App**

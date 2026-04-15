@@ -30,19 +30,21 @@ INSTALL_DIR="/usr/local/hestia/web/api/monitor"
 echo -e "[*] Creating secure API directory..."
 mkdir -p "$INSTALL_DIR"
 
+# -- ΝΕΟ: Δυναμική εύρεση του ιδιοκτήτη του HestiaCP --
+HESTIA_OWNER=$(stat -c '%U:%G' /usr/local/hestia/web/api)
+
 # 3. Generate a random 24-character Secret Key
 SECRET_KEY=$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)
 echo "$SECRET_KEY" > "$INSTALL_DIR/secret.key"
 chmod 600 "$INSTALL_DIR/secret.key"
-chown admin:admin "$INSTALL_DIR/secret.key"
+chown $HESTIA_OWNER "$INSTALL_DIR/secret.key"
 
 # 4. Download index.php from GitHub
-# IMPORTANT: Replace 'jampwebsolutions' with your actual github structure if needed
 echo -e "[*] Downloading bridge files..."
 curl -s -o "$INSTALL_DIR/index.php" "https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/index.php"
 
 # Ensure correct ownership for Hestia's web server
-chown -R admin:admin "$INSTALL_DIR"
+chown -R $HESTIA_OWNER "$INSTALL_DIR"
 chmod 755 "$INSTALL_DIR"
 
 # 5. Output connection details
