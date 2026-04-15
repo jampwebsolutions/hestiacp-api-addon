@@ -38,8 +38,6 @@ echo -e "[*] Downloading bridge files from GitHub..."
 curl -s -o "$INSTALL_DIR/index.php" "https://raw.githubusercontent.com/jampwebsolutions/hestiacp-api-addon/main/index.php"
 
 # 5. INJECT THE KEY INTO THE PHP FILE (The Fix)
-# We use 'sed' to replace the placeholder with the actual unique key
-# Αντικαθιστά μόνο την ανάθεση της μεταβλητής (πιο ασφαλές)
 sed -i "s/\$SECRET_KEY = 'JAMP_KEY_PLACEHOLDER';/\$SECRET_KEY = '$SECRET_KEY';/g" "$INSTALL_DIR/index.php"
 
 # 6. Set correct ownership and permissions
